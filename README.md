@@ -4,9 +4,10 @@
       - It has to be run within the project directory
 
 ##How to Stop a Django Project
-Use CRTL-BREAK 
-For my laptop, I need to use ctrl+fn+b
+1) Use CRTL-BREAK 
+      - For my laptop, I need to use ctrl+fn+b
 
 ##How to Migrate changes in Django Project
-Once execution stops for the DJango Project type python manage.py migrate
+1) Use the above command to step execution
+2) type python manage.py migrate
 
