@@ -1,64 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Information</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
-        }
-        .welcome {
-            font-size: 1.2em;
-            color: #2980b9;
-            margin-bottom: 20px;
-        }
-        .location {
-            font-weight: bold;
-            color: #16a085;
-        }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        li {
-            background-color: #fff;
-            margin-bottom: 10px;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        li:before {
-            content: "• ";
-            color: #3498db;
-            font-weight: bold;
-            display: inline-block;
-            width: 1em;
-            margin-left: -1em;
-        }
-    </style>
+    <title>Weather Results</title>
 </head>
 <body>
-    <h1>Weather Information</h1>
-    <p class="welcome">Welcome {{ first_name }} {{ last_name }}!</p>
-    <p>Weather for <span class="location">{{ city }}, {{ state }}, {{ country }}</span>:</p>
-    <ul>
-        <li>Temperature: {{ weather_info.temperature_f }}°F/ {{ weather_info.temperature_c }}°C </li>
-        <li>Precipitation: {{ weather_info.precipitation }}</li>
-        <li>Humidity: {{ weather_info.humidity }}</li>
-        <li>Wind: {{ weather_info.wind }}</li>
-    </ul>
+    <h1>Weather Information for {{ city }}, {{ state }}, {{ country }}</h1>
+
+    <p><strong>Temperature:</strong> {{ weather_info.temperature_f }}</p>
+    <p><strong>Condition:</strong> {{ weather_info.condition }}</p>
+    <p><strong>Wind:</strong> {{ weather_info.wind }}</p>
+    <p><strong>Humidity:</strong> {{ weather_info.humidity }}</p>
+
+    <a href="{% url 'weather_form' %}">Back to Weather Form</a>
 </body>
 </html>

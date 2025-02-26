@@ -1,88 +1,121 @@
-import requests
-from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager  # Automatically manages ChromeDriver
 from django.shortcuts import render
 from .forms import WeatherForm
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
 
 def fetch_weather(city, state, country):
-    search_query = f"{city} {state} {country} weather"
-    url = f"https://www.google.com/search?q={search_query}"
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36'
-    }
+    # Set up Selenium WebDriver with WebDriver Manager
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--ignore-certificate-errors")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-software-rasterizer")
+
+    # Enable the acceptInsecureCerts capability
+    capabilities = DesiredCapabilities.CHROME.copy()
+    capabilities['acceptInsecureCerts'] = True
+
+    # Use WebDriver Manager to automatically download and manage the correct ChromeDriver version
+    service = Service(ChromeDriverManager().install())
+
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+
     try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        driver.execute_cdp_cmd("Security.setIgnoreCertificateErrors", {"ignore": True})
 
-        soup = BeautifulSoup(response.text, 'html.parser')
-        temperature_f = soup.find("span", class_="wob_t")
+        # Build the URL for Wunderground
+        url = f"https://www.wunderground.com/weather/{country}/{state}/{city}"
+        driver.get(url)
 
-        if temperature_f:  # Check if temperature_f is not None
-            try:
-                temp_f = int(temperature_f.text)
-            except (ValueError, AttributeError):
-                temp_f = None  # Handle cases where temperature is not a valid integer
-        else:
-            temp_f = None
+        # Use WebDriverWait to dynamically wait for elements to load
+        wait = WebDriverWait(driver, 10)  # Wait up to 10 seconds for elements
 
-        if temp_f is not None:
-            temp_c = round((temp_f - 32) * (5 / 9), 1)
-            temperature_c = f"{temp_c}"
-        else:
-            temperature_c = 'N/A'
+        # Scrape temperature (Fahrenheit)
+        try:
+            temperature_f = wait.until(
+                EC.presence_of_element_located((By.CLASS_NAME, "wu-value"))
+            ).text
+        except Exception:
+            temperature_f = "N/A"
 
-        conditions = soup.find("span", {"id": "wob_dc"})
-        location = soup.find("div", {"id": "wob_loc"})
-        precipitation = soup.find("span", {"id": "wob_pp"})
-        humidity = soup.find("span", {"id": "wob_hm"})
-        wind = soup.find("span", {"id": "wob_ws"})
+        # Scrape weather condition (e.g., Cloudy)
+        try:
+            condition = wait.until(
+                EC.presence_of_element_located((By.CLASS_NAME, "condition-icon"))
+            ).text
+        except Exception:
+            condition = "N/A"
 
+        # Scrape wind information
+        try:
+            wind = wait.until(
+                EC.presence_of_element_located(
+                    (By.XPATH, "//span[contains(text(), 'Wind')]/following-sibling::span")
+                )
+            ).text
+        except Exception:
+            wind = "N/A"
+
+        # Scrape humidity
+        try:
+            humidity = wait.until(
+                EC.presence_of_element_located(
+                    (By.XPATH, "//span[contains(text(), 'Humidity')]/following-sibling::span")
+                )
+            ).text
+        except Exception:
+            humidity = "N/A"
+
+        # Return the scraped data as a dictionary
         weather_info = {
-            'temperature_f': f"{temp_f}°F" if temp_f is not None else 'N/A',  # Display N/A if temp_f is None
-            'temperature_c': temperature_c,
-            'conditions': conditions.text if conditions else 'N/A',
-            'location': location.text if location else 'N/A',
-            'precipitation': precipitation.text if precipitation else 'N/A',
-            'humidity': humidity.text if humidity else 'N/A',
-            'wind': wind.text if wind else 'N/A'
+            'temperature_f': temperature_f,
+            'condition': condition,
+            'wind': wind,
+            'humidity': humidity,
         }
         return weather_info
-    except requests.exceptions.RequestException as e:
-        # Handle network errors
-        print(f"Network error: {e}")  # Log the error for debugging
-        return None  # Or return a dictionary with an error message
+
     except Exception as e:
-        # Handle other potential errors during parsing
-        print(f"An error occurred: {e}")
-        return None  #Or return a dictionary with an error message
+        print(f"Error during scraping: {e}")
+        return {'error': 'Failed to fetch weather data. Please try again later.'}
+
+    finally:
+        driver.quit()
 
 
 def weather_view(request):
     if request.method == 'POST':
+        print("POST request received!")
         form = WeatherForm(request.POST)
         if form.is_valid():
-            first_name = form.cleaned_data['firstName']
-            last_name = form.cleaned_data['lastName']
+            print("Form is valid!")
             city = form.cleaned_data['city']
             state = form.cleaned_data['state']
             country = form.cleaned_data['country']
 
+            # Fetch weather data (replace with your actual logic)
             weather_info = fetch_weather(city, state, country)
 
-            # Handle the case where fetch_weather returns None (error)
-            if weather_info is None:
-                return render(request, 'weather_result.html', {
-                    'error_message': 'Could not retrieve weather information.  Please check the location and try again.'
-                })
-
+            # Render the results page with weather data
             return render(request, 'weather_result.html', {
-                'first_name': first_name,
-                'last_name': last_name,
                 'city': city,
                 'state': state,
                 'country': country,
-                'weather_info': weather_info
+                'weather_info': weather_info,
             })
+        else:
+            print("Form is invalid!")
     else:
+        print("GET request received!")
         form = WeatherForm()
 
     return render(request, 'weather_form.html', {'form': form})
