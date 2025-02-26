@@ -8,6 +8,6 @@
       - For my laptop, I need to use ctrl+fn+b
 
 ##How to Migrate changes in Django Project
-1) Use the above command to step execution
+1) Use the above command to stop execution
 2) type python manage.py migrate
 
