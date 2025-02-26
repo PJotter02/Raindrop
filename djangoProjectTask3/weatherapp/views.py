@@ -1,121 +1,82 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager  # Automatically manages ChromeDriver
 from django.shortcuts import render
+from django.conf import settings
+from django.views.decorators.http import require_http_methods
+import requests
 from .forms import WeatherForm
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 
 def fetch_weather(city, state, country):
-    # Set up Selenium WebDriver with WebDriver Manager
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--ignore-certificate-errors")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-software-rasterizer")
+    country = country.upper()
 
-    # Enable the acceptInsecureCerts capability
-    capabilities = DesiredCapabilities.CHROME.copy()
-    capabilities['acceptInsecureCerts'] = True
+    # Validate country code before API call
+    if len(country) != 2 or not country.isalpha():
+        return {'error': 'Invalid country code. Use 2-letter ISO format (e.g., US, UK)'}
 
-    # Use WebDriver Manager to automatically download and manage the correct ChromeDriver version
-    service = Service(ChromeDriverManager().install())
-
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    # State only required for US locations
+    location_query = f"{city},{state},{country}" if country == "US" else f"{city},{country}"
 
     try:
-        driver.execute_cdp_cmd("Security.setIgnoreCertificateErrors", {"ignore": True})
+        response = requests.get(
+            "https://api.openweathermap.org/data/2.5/weather",
+            params={
+                "q": location_query,
+                "units": "imperial",
+                "appid": settings.OPENWEATHER_API_KEY
+            },
+            timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
 
-        # Build the URL for Wunderground
-        url = f"https://www.wunderground.com/weather/{country}/{state}/{city}"
-        driver.get(url)
+        # Validate response structure
+        if not all(key in data for key in ('main', 'weather', 'wind')):
+            return {'error': 'Invalid API response format'}
 
-        # Use WebDriverWait to dynamically wait for elements to load
-        wait = WebDriverWait(driver, 10)  # Wait up to 10 seconds for elements
-
-        # Scrape temperature (Fahrenheit)
-        try:
-            temperature_f = wait.until(
-                EC.presence_of_element_located((By.CLASS_NAME, "wu-value"))
-            ).text
-        except Exception:
-            temperature_f = "N/A"
-
-        # Scrape weather condition (e.g., Cloudy)
-        try:
-            condition = wait.until(
-                EC.presence_of_element_located((By.CLASS_NAME, "condition-icon"))
-            ).text
-        except Exception:
-            condition = "N/A"
-
-        # Scrape wind information
-        try:
-            wind = wait.until(
-                EC.presence_of_element_located(
-                    (By.XPATH, "//span[contains(text(), 'Wind')]/following-sibling::span")
-                )
-            ).text
-        except Exception:
-            wind = "N/A"
-
-        # Scrape humidity
-        try:
-            humidity = wait.until(
-                EC.presence_of_element_located(
-                    (By.XPATH, "//span[contains(text(), 'Humidity')]/following-sibling::span")
-                )
-            ).text
-        except Exception:
-            humidity = "N/A"
-
-        # Return the scraped data as a dictionary
-        weather_info = {
-            'temperature_f': temperature_f,
-            'condition': condition,
-            'wind': wind,
-            'humidity': humidity,
+        return {
+            'temperature': f"{data['main']['temp']}°F",
+            'condition': data['weather'][0]['description'].title(),
+            'icon': f"https://openweathermap.org/img/wn/{data['weather'][0]['icon']}@2x.png",
+            'details': {
+                'feels_like': f"{data['main']['feels_like']}°F",
+                'humidity': f"{data['main']['humidity']}%",
+                'wind_speed': f"{data['wind'].get('speed', 0)} mph",
+                'pressure': f"{data['main']['pressure']} hPa"
+            }
         }
-        return weather_info
 
-    except Exception as e:
-        print(f"Error during scraping: {e}")
-        return {'error': 'Failed to fetch weather data. Please try again later.'}
+    except requests.exceptions.HTTPError as e:
+        # Handle specific HTTP errors
+        error_map = {
+            401: "Invalid API key - contact site administrator",
+            404: "Location not found - please check your input",
+            429: "Too many requests - try again later"
+        }
+        return {'error': error_map.get(e.response.status_code, f"API Error: {e}")}
+    except (KeyError, IndexError):
+        return {'error': "Received unexpected data format from weather service"}
+    except requests.exceptions.RequestException as e:
+        return {'error': f"Connection error: {str(e)}"}
 
-    finally:
-        driver.quit()
 
-
+@require_http_methods(["GET", "POST"])
 def weather_view(request):
     if request.method == 'POST':
-        print("POST request received!")
         form = WeatherForm(request.POST)
         if form.is_valid():
-            print("Form is valid!")
-            city = form.cleaned_data['city']
-            state = form.cleaned_data['state']
-            country = form.cleaned_data['country']
+            weather_data = fetch_weather(
+                city=form.cleaned_data['city'],
+                state=form.cleaned_data['state'],
+                country=form.cleaned_data['country']
+            )
+            if 'error' in weather_data:
+                form.add_error(None, weather_data['error'])
 
-            # Fetch weather data (replace with your actual logic)
-            weather_info = fetch_weather(city, state, country)
-
-            # Render the results page with weather data
-            return render(request, 'weather_result.html', {
-                'city': city,
-                'state': state,
-                'country': country,
-                'weather_info': weather_info,
-            })
-        else:
-            print("Form is invalid!")
+            else:
+                return render(request, 'weather_result.html', {
+                    'weather_info': weather_data,
+                    'form_data': form.cleaned_data
+                })
     else:
-        print("GET request received!")
         form = WeatherForm()
 
     return render(request, 'weather_form.html', {'form': form})

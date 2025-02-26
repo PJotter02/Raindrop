@@ -1,21 +1,109 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Weather Form</title>
+    <title>Weather Check</title>
+    <style>
+        .container {
+            max-width: 400px;
+            margin: 2rem auto;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type="text"].error {
+            border-color: #dc3545;
+        }
+        .error {
+            color: #dc3545;
+            font-size: 0.9em;
+            margin-top: -0.5rem;
+        }
+        button {
+            background: #453626;
+            color: #22ff00;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
 </head>
 <body>
-    <form method="POST" action="{% url 'weather_form' %}">
-        {% csrf_token %}
-        <label for="city">City:</label>
-        <input type="text" id="city" name="city" required><br>
+    <div class="container">
+        <h1>
+            <center>Raindrop</center>
+        </h1>
+        <h3>
+            Input city, state(if applicable), and Country to check local weather
+        </h3>
 
-        <label for="state">State:</label>
-        <input type="text" id="state" name="state" required><br>
+        <!-- Display non-field errors -->
+        {% if form.non_field_errors %}
+            <div class="error">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
 
-        <label for="country">Country:</label>
-        <input type="text" id="country" name="country" required><br>
+        <form method="POST" action="{% url 'weather_view' %}">
+            {% csrf_token %}
 
-        <button type="submit">Get Weather</button>
-    </form>
+            <!-- City Field -->
+            <div class="form-group">
+                <label for="id_city">City:</label>
+                {{ form.city }}
+                {% if form.city.errors %}
+                    <div class="error">{{ form.city.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+
+            <!-- State Field -->
+            <div class="form-group">
+                <label for="id_state">State (US only):</label>
+                {{ form.state }}
+                {% if form.state.errors %}
+                    <div class="error">{{ form.state.errors|join:", " }}</div>
+                {% endif %}
+                <small>Required only for US locations. 2 letters (e.g. ID for Idaho)</small>
+            </div>
+
+            <!-- Country Field -->
+            <div class="form-group">
+                <label for="id_country">Country Code:</label>
+                {{ form.country }}
+                {% if form.country.errors %}
+                    <div class="error">{{ form.country.errors|join:", " }}</div>
+                {% endif %}
+                <small>2-letter ISO code (e.g., US, CA, FR)</small>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit">Get Weather</button>
+        </form>
+    </div>
 </body>
+<footer>
+    <center>Raindrop</center>
+    <br>
+    <center>Powered by OpenWeatherMap ☁️</center>
+</footer>
 </html>
