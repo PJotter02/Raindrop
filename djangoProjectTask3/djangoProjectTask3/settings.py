@@ -115,7 +115,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 load_dotenv()  # Load environment variables from .env file
 
 # OpenWeatherMap Configuration
-OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '523e87560b866141099e54b837801ed3')  # Default to your key
+OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '')  # Default to your key
 
 # Cache Configuration
 CACHES = {

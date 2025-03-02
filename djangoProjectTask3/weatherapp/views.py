@@ -15,13 +15,14 @@ def fetch_weather(city, state, country):
     # State only required for US locations
     location_query = f"{city},{state},{country}" if country == "US" else f"{city},{country}"
 
+    api_key = ''
     try:
         response = requests.get(
             "https://api.openweathermap.org/data/2.5/weather",
             params={
                 "q": location_query,
                 "units": "imperial",
-                "appid": settings.OPENWEATHER_API_KEY
+                "appid": api_key
             },
             timeout=10
         )
@@ -61,8 +62,10 @@ def fetch_weather(city, state, country):
 @require_http_methods(["GET", "POST"])
 def weather_view(request):
     if request.method == 'POST':
+        print("Post was successful")
         form = WeatherForm(request.POST)
         if form.is_valid():
+            print("Form is valid")
             weather_data = fetch_weather(
                 city=form.cleaned_data['city'],
                 state=form.cleaned_data['state'],
