@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    /* General Styles - Match your dashboard theme */
+    .weather-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 1.5rem;
+        background-color: #b8b3a9;  /* Light beige background */
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    h2,
+    h3,
+    h4 {
+        color: #030303;  /* Near black text */
+    }
+
+    /* Current Weather Section */
+    .current-weather {
+        text-align: center;
+        padding: 1.5rem;
+        border-bottom: 2px solid #D4C9BE;  /* Light beige border */
+        margin-bottom: 2rem;
+    }
+
+    .weather-main {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        margin: 1rem 0;
+    }
+
+    .weather-icon {
+        width: 100px;
+        height: auto;
+    }
+
+    .temperature {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #123458;  /* Dark blue temperature */
+    }
+
+    .condition {
+        font-size: 1.2rem;
+        color: #030303;  /* Near black condition */
+    }
+
+    /* Weather Stats */
+    .weather-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .stat-item {
+        background: #D4C9BE;  /* Light beige stat background */
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+        color: #030303;  /* Near black stat text */
+    }
+
+    /* Forecast Section */
+    .forecast-section {
+        margin-top: 2rem;
+    }
+
+    .forecast-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .forecast-card {
+        background: #D4C9BE;  /* Light beige forecast background */
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .forecast-icon {
+        width: 50px;
+        height: auto;
+        margin: 0.5rem 0;
+    }
+
+    .forecast-temp {
+        font-weight: bold;
+        margin: 0.3rem 0;
+        color: #123458;  /* Dark blue forecast temp */
+    }
+
+    .forecast-desc {
+        color: #030303;  /* Near black forecast description */
+    }
+
+    .forecast-details {
+        margin-top: 0.5rem;
+        color: #030303;  /* Near black forecast details */
+    }
+
+    /* Radar Map Section */
+    .radar-section {
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 2px solid #D4C9BE;  /* Light beige border */
+    }
+
+    .map-controls {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .map-controls .btn {
+        padding: 6px 12px;
+        border: 1px solid #123458;  /* Dark blue button border */
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background-color: #F1EFEC;  /* Light beige button background */
+        color: #123458;  /* Dark blue button text */
+    }
+
+    .map-controls .btn.active {
+        background: #123458;  /* Dark blue active button background */
+        color: #F1EFEC;  /* Light beige active button text */
+    }
+
+    #radar-map {
+        border: 1px solid #D4C9BE;  /* Light beige map border */
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .text-muted {
+        color: #030303;  /* Near black muted text */
+        text-align: center;
+        margin-top: 8px;
+    }
+
+    /* Leaflet attribution - ensure it's visible */
+    .leaflet-control-attribution {
+        background: rgba(255, 255, 255, 0.7);
+        border-radius: 4px;
+        padding: 2px 5px;
+        font-size: 0.75em;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .weather-main {
+            flex-direction: column;
+        }
+
+        .forecast-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        #radar-map {
+            height: 300px;
+        }
+    }
+</style>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<div class="weather-container">
+    <!-- Current Weather Section -->
+    <div class="current-weather">
+        <h2>Current Weather in {{ form_data.city }}, {% if form_data.state %}{{ form_data.state }}, {% endif %}{{ form_data.country }}
+        </h2>
+        <div class="weather-main">
+            <img src="{{ weather_info.current.icon }}" alt="Weather Icon" class="weather-icon">
+            <div class="weather-details">
+                <p class="temperature">{{ weather_info.current.temperature }}</p>
+                <p class="condition">{{ weather_info.current.condition }}</p>
+            </div>
+        </div>
+
+        <div class="weather-stats">
+            <div class="stat-item">
+                <span class="stat-label">Feels Like</span><br>
+                <span class="stat-value">{{ weather_info.current.details.feels_like }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Humidity</span><br>
+                <span class="stat-value">{{ weather_info.current.details.humidity }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Wind</span><br>
+                <span class="stat-value">{{ weather_info.current.details.wind_speed }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Pressure</span><br>
+                <span class="stat-value">{{ weather_info.current.details.pressure }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5-Day Forecast Section -->
+    <div class="forecast-section">
+        <h3>5-Day Forecast</h3>
+        <div class="forecast-grid">
+            {% for day in weather_info.forecast %}
+            <div class="forecast-card">
+                <h4>{{ day.date|date:"D M d" }}</h4>
+                <img src="{{ day.icon }}" alt="Forecast Icon" class="forecast-icon">
+                <p class="forecast-temp">{{ day.temp }}</p>
+                <p class="forecast-desc">{{ day.description }}</p>
+                <div class="forecast-details">
+                    <p>💧 {{ day.humidity }}</p>
+                    <p>💨 {{ day.wind_speed }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Radar Map Section -->
+    <div class="radar-section">
+        <h3>Weather Maps</h3>
+        <div class="map-controls">
+            <button class="btn active" data-layer="precipitation">🌧️ Precipitation</button>
+            <button class="btn" data-layer="clouds">☁️ Clouds</button>
+            <button class="btn" data-layer="temperature">🌡️ Temperature</button>
+        </div>
+        <div id="radar-map" style="height: 400px;" data-lat="{{ map_context.lat }}"
+            data-lon="{{ map_context.lon }}" data-api-key="{{ map_context.api_key }}">
+        </div>
+        <p class="text-muted">
+            <li><a href="{% url 'weather_view' %}">New Search</a></li>
+            Map data © OpenWeatherMap
+        </p>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const initMap = () => {
+        const mapElement = document.getElementById('radar-map');
+        if (!mapElement) return;
+
+        const lat = parseFloat(mapElement.dataset.lat);
+        const lon = parseFloat(mapElement.dataset.lon);
+        const apiKey = mapElement.dataset.apiKey;
+
+        if (isNaN(lat) || isNaN(lon)) {
+            console.error('Invalid coordinates');
+            return;
+        }
+
+        const map = L.map('radar-map', {
+            attributionControl: true  // Ensure attribution is always visible
+        }).setView([lat, lon], 7);
+
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        const weatherLayers = {
+            precipitation: L.tileLayer(
+                `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${apiKey}`, {
+                    maxZoom: 10,
+                    opacity: 0.8,
+                    crossOrigin: true, // Required for CORS
+                    attribution: 'Weather data © OpenWeatherMap'
+                }
+            ),
+            clouds: L.tileLayer(
+                `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${apiKey}`, {
+                    maxZoom: 10,
+                    opacity: 0.8,
+                    crossOrigin: true, // Required for CORS
+                    attribution: 'Weather data © OpenWeatherMap'
+                }
+            ),
+            temperature: L.tileLayer(
+                `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${apiKey}`, {
+                    maxZoom: 10,
+                    crossOrigin: true, // Required for CORS
+                    attribution: 'Weather data © OpenWeatherMap'
+                }
+            )
+        };
+
+        let activeLayer = weatherLayers.precipitation;
+        activeLayer.addTo(map);
+
+        document.querySelectorAll('.map-controls .btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const layer = button.dataset.layer;
+                const newLayer = weatherLayers[layer];
+
+                if (newLayer) {
+                    activeLayer.remove();
+                    newLayer.addTo(map);
+                    activeLayer = newLayer;
+
+                    document.querySelectorAll('.map-controls .btn').forEach(btn =>
+                        btn.classList.remove('active')
+                    );
+                    button.classList.add('active');
+                }
+            });
+        });
+
+        Object.values(weatherLayers).forEach(layer => {
+            layer.on('tileerror', (e) => {
+                console.error('Tile load error:', e.error.message);
+            });
+        });
+    };
+
+    document.addEventListener('DOMContentLoaded', initMap);
+</script>
+{% endblock %}

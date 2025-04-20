@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Weather Dashboard{% endblock %}</title>
+    <style>
+        /* Base Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #F1EFEC;
+            color: #030303;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        /* Navigation Bar */
+        nav {
+            background-color: #123458;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        nav a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-greeting {
+            color: #D4C9BE;
+            margin-right: auto;
+            font-weight: 500;
+        }
+
+        /* Responsive Navigation */
+        @media (max-width: 768px) {
+            nav ul {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            
+            .user-greeting {
+                width: 100%;
+                text-align: center;
+                margin: 0.5rem 0;
+            }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav>
+        <ul>
+            {% if user.is_authenticated %}
+                <li class="user-greeting">Welcome, {{ user.username }}!</li>
+                <li>
+                    <form action="{% url 'logout' %}" method="post" class="logout-form">
+                        {% csrf_token %}
+                        <button type="submit" style="
+                            background: none;
+                            border: none;
+                            color: white;
+                            cursor: pointer;
+                            padding: 0.5rem 1rem;
+                            font: inherit;
+                        ">Logout</button>
+                    </form>
+                </li>
+            {% else %}
+                <li><a href="{% url 'login' %}">Login</a></li>
+                <li><a href="{% url 'register' %}">Register</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    {% block content %}
+    {% endblock %}
+</body>
+</html>

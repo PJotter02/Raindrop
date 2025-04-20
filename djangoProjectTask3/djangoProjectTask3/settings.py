@@ -25,8 +25,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'crispy_forms',
+    'crispy_bootstrap5',
     'weatherapp',
 ]
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -36,6 +41,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'weatherapp.middleware.SearchHistoryMiddleware'
 ]
 
 ROOT_URLCONF = 'djangoProjectTask3.urls'
@@ -115,15 +121,24 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 load_dotenv()  # Load environment variables from .env file
 
 # OpenWeatherMap Configuration
-OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '')  # Default to your key
+OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', 'bd9b9899eab4c8ba0555b0e85c0321f2')  # Default to your key
 
 # Cache Configuration
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'TIMEOUT': 300,  # 5 minutes cache for weather data
+        'LOCATION': 'weather-app-cache',
     }
 }
+
+# Authentication Settings
+LOGIN_URL = 'login'
+LOGOUT_REDIRECT_URL = 'login'
+LOGIN_REDIRECT_URL = "weather_view"
+
+# Session Settings
+SESSION_COOKIE_AGE = 1209600 # 2 weeks
+SESSION_SAVE_EVERY_REQUEST = True
 
 # Security Enhancements
 if DEBUG:
@@ -134,10 +149,10 @@ else:
     CSRF_COOKIE_SECURE = True
 
 # Static files configuration
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
+#STATIC_ROOT = BASE_DIR / 'staticfiles'
+#STATICFILES_DIRS = [
+#    BASE_DIR / 'static',
+#]
 
 # Add if using Django 4.2+ for better security headers
 SECURE_CONTENT_TYPE_NOSNIFF = True

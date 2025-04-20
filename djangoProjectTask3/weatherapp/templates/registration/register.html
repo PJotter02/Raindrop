@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block title %}Register - Weather Dashboard{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h2 class="auth-heading">Create Account</h2>
+    <form method="post" class="auth-form">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="{{ form.username.id_for_label }}">Username</label>
+            {{ form.username }}
+            {% if form.username.errors %}
+                <div class="error-message">{{ form.username.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.email.id_for_label }}">Email</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+                <div class="error-message">{{ form.email.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.password1.id_for_label }}">Password</label>
+            {{ form.password1 }}
+            {% if form.password1.errors %}
+                <div class="error-message">{{ form.password1.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.password2.id_for_label }}">Confirm Password</label>
+            {{ form.password2 }}
+            {% if form.password2.errors %}
+                <div class="error-message">{{ form.password2.errors }}</div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="auth-button">Register</button>
+        <div class="auth-links">
+            Already have an account? <a href="{% url 'login' %}">Login</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Shared Auth Styles */
+    .auth-container {
+        max-width: 400px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .auth-heading {
+        color: #123458;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.2rem;
+    }
+
+    .form-group label {
+        display: block;
+        color: #123458;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 0.8rem;
+        border: 1px solid #D4C9BE;
+        border-radius: 4px;
+        background-color: #F1EFEC;
+        transition: all 0.3s ease;
+    }
+
+    .form-group input:focus {
+        outline: none;
+        border-color: #123458;
+        background-color: white;
+    }
+
+    .auth-button {
+        width: 100%;
+        padding: 1rem;
+        background-color: #123458;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background-color 0.3s ease;
+    }
+
+    .auth-button:hover {
+        background-color: #0f2a4a;
+    }
+
+    .auth-links {
+        margin-top: 1rem;
+        text-align: center;
+        color: #666;
+    }
+
+    .auth-links a {
+        color: #123458;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .auth-links a:hover {
+        color: #0f2a4a;
+        text-decoration: underline;
+    }
+
+    .error-message {
+        color: #dc3545;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+
+    @media (max-width: 480px) {
+        .auth-container {
+            margin: 1rem;
+            padding: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% block extra_head %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialize Sortable.js
+    const grid = document.querySelector('.dashboard-grid');
+    new Sortable(grid, {
+        animation: 150,
+        ghostClass: 'ghost',
+        chosenClass: 'chosen',
+        dragClass: 'dragging',
+        handle: '.module-header',
+        onEnd: function(evt) {
+            // Save layout to localStorage
+            const modules = Array.from(grid.children).map(el => el.dataset.module);
+            localStorage.setItem('dashboardLayout', JSON.stringify(modules));
+        }
+    });
+
+    // Initialize favorite toggles
+    $('.favorite-toggle').click(function(e) {
+        e.preventDefault();
+        const button = $(this);
+        const url = button.data('action');
+        
+        const locationData = {
+            city: button.data('city'),
+            state: button.data('state'),
+            country: button.data('country'),
+            csrfmiddlewaretoken: '{{ csrf_token }}'
+        };
+
+        $.ajax({
+            url: url,
+            method: 'POST',
+            data: locationData,
+            success: function(response) {
+                const isFavorite = response.status === 'added';
+                button.find('.btn-text').html(
+                    isFavorite ? '⭐ Remove Favorite' : '✩ Add Favorite'
+                );
+                button.toggleClass('btn-remove', !isFavorite);
+                if ($('.favorites-container').length) location.reload();
+            },
+            error: function(xhr) {
+                console.error('Error:', xhr.responseText);
+                alert('Error updating favorite. Check console for details.');
+            }
+        });
+    });
+
+    // Load saved layout
+    const savedLayout = localStorage.getItem('dashboardLayout');
+    if (savedLayout) {
+        const modules = JSON.parse(savedLayout);
+        modules.forEach(moduleId => {
+            const module = document.querySelector(`[data-module="${moduleId}"]`);
+            grid.appendChild(module);
+        });
+    }
+});
+</script>
+{% endblock %}
+
+<div class="container">
+  <!-- Header Section -->
+  <div class="header" style="background-color: #123458; color: white;">
+    <div class="user-status">
+      {% if user.is_authenticated %}
+      
+      {% else %}
+      <a href="{% url 'login' %}?next={{ request.path }}" class="btn-login">Log In</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Modular Dashboard -->
+  <div class="dashboard-grid">
+    <!-- Weather Form Module -->
+    <div class="module weather-module" data-module="search" style="background-color: #F1EFEC;">
+      <div class="module-header" style="background-color: #D4C9BE; border-bottom-color: #D4C9BE;">
+        <h2 style="color: #030303;">Check Weather</h2>
+        <span class="grip" style="color: #030303;">⣿⣿</span>
+      </div>
+      <div class="module-content">
+        <form method="post">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button type="submit" class="btn-submit" style="background-color: #123458; color: white;">Get Weather</button>
+        </form>
+        {% if weather_info %}
+        <div class="favorite-section">
+          <button class="favorite-toggle" 
+                  data-action="{% url 'add_favorite_location' %}"
+                  data-city="{{ form_data.city }}"
+                  data-state="{{ form_data.state }}"
+                  data-country="{{ form_data.country }}"
+                  style="background-color: #D4C9BE; border-color: #D4C9BE; color: #030303;">
+            <span class="btn-text">
+              {% if is_favorite %}⭐ Remove Favorite{% else %}✩ Add Favorite{% endif %}
+            </span>
+          </button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Favorites Module -->
+    <div class="module favorites-module" data-module="favorites" style="background-color: #F1EFEC;">
+      <div class="module-header" style="background-color: #D4C9BE; border-bottom-color: #D4C9BE;">
+        <h3 style="color: #030303;">Favorite Locations</h3>
+        <span class="grip" style="color: #030303;">⣿⣿</span>
+      </div>
+      <div class="module-content">
+        {% if favorites %}
+        <ul class="favorites-list">
+          {% for favorite in favorites %}
+          <li class="favorite-item">
+            <a href="{{ favorite.get_weather_url }}" class="favorite-link" style="color: #030303;">
+              {{ favorite.nickname|default:favorite.city }}
+            </a>
+            <button class="favorite-toggle btn-remove"
+                    data-action="{% url 'remove_favorite_location' %}"
+                    data-city="{{ favorite.city }}"
+                    data-state="{{ favorite.state }}"
+                    data-country="{{ favorite.country }}"
+                    style="background-color: #D4C9BE; border-color: #D4C9BE; color: #030303;">
+              Remove
+            </button>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="no-favorites" style="color: #030303;">No favorite locations saved</p>
+        {% endif %}
+      </div>
+    </div>
+    <!-- Search History Module -->
+    <div class="module history-module" data-module="history" style="background-color: #F1EFEC;">
+      <div class="module-header" style="background-color: #D4C9BE; border-bottom-color: #D4C9BE;">
+        <h3 style="color: #030303;">Recent Searches</h3>
+        <span class="grip" style="color: #030303;">⣿⣿</span>
+      </div>
+      <div class="module-content">
+        {% if recent_searches %}
+        <ul class="search-history-list">
+          {% for search in recent_searches %}
+          <li class="search-item">
+            <a href="{{ search.get_search_url }}" class="search-link" style="color: #030303;">
+              <span class="search-query">{{ search.query }}</span>
+              <span class="search-date">{{ search.search_date|date:"M d, Y H:i" }}</span>
+            </a>
+            <button class="favorite-toggle"
+                    data-action="{% url 'add_favorite_location' %}"
+                    data-city="{{ search.city }}"
+                    data-state="{{ search.state }}"
+                    data-country="{{ search.country }}"
+                    style="background-color: #D4C9BE; border-color: #D4C9BE; color: #030303;">
+              <span class="btn-text">
+                {% if search.is_favorite %}⭐ Remove{% else %}✩ Add{% endif %}
+              </span>
+            </button>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="no-searches" style="color: #030303;">No recent searches found</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* General Styles */
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #F1EFEC;
+    color: #030303;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+
+  .container {
+    width: 90%;
+    max-width: 1400px;
+    margin: 2rem auto;
+    padding: 0;
+  }
+
+  /* Dashboard Grid */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+    align-items: start;
+  }
+
+  /* Module Styles */
+  .module {
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease;
+  }
+
+  .module-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #D4C9BE;
+    cursor: move;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .grip {
+    user-select: none;
+  }
+
+  .module-content {
+    padding: 1.5rem;
+  }
+
+  /* Drag-and-Drop States */
+  .ghost {
+    opacity: 0.5;
+    background: #D4C9BE;
+  }
+
+  .chosen {
+    transform: rotate(2deg);
+  }
+
+  .dragging {
+    opacity: 0.5;
+  }
+
+  /* Favorite Toggle Buttons */
+  .favorite-toggle {
+    padding: 5px 12px;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-left: 10px;
+    font-size: 0.9rem;
+  }
+  .btn-remove {
+    background-color: #D4C9BE;
+    border-color: #D4C9BE;
+    color: #030303;
+  }
+
+  .btn-remove:hover {
+    background-color: #c9b7b0;
+  }
+
+  /* List Items */
+  .favorite-item, .search-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+  }
+
+  .favorite-link, .search-link {
+    flex-grow: 1;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .search-link {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .search-date {
+    font-size: 0.85em;
+    color: #030303;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .favorite-item, .search-item {
+      flex-wrap: wrap;
+    }
+    
+    .favorite-toggle {
+      margin-top: 5px;
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
