@@ -1,7 +1,15 @@
+<<<<<<< HEAD
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
 from .models import SearchHistory, FavoriteLocation
+=======
+# Import necessary Django and third-party modules
+from django.shortcuts import render
+from django.conf import settings
+from django.views.decorators.http import require_http_methods
+import requests
+>>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
 from .forms import WeatherForm
 from django.conf import settings
 import requests
@@ -61,10 +69,28 @@ def validate_owm_response(data, required_fields):
 
 
 def fetch_weather(city, state, country):
+    """
+    Fetches weather data from OpenWeatherMap API for a given location.
+    Parameters:
+        city (str): Name of the city
+        state (str): State code (required for US locations)
+        country (str): Two-letter country code
+    Returns:
+        dict: Weather data or error message
+    """
     country = country.upper()
+<<<<<<< HEAD
     if len(country) != 2 or not country.isalpha():
         return {'error': 'Invalid country code. Use 2-letter ISO format (e.g., US, UK)'}
 
+=======
+
+    # Validate country code format
+    if len(country) != 2 or not country.isalpha():
+        return {'error': 'Invalid country code. Use 2-letter ISO format (e.g., US, UK)'}
+
+    # Construct location query based on whether it's a US location or not
+>>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
     location_query = f"{city},{state},{country}" if country == "US" else f"{city},{country}"
     api_key = settings.OPENWEATHER_API_KEY
 
@@ -73,9 +99,18 @@ def fetch_weather(city, state, country):
         'forecast': "https://api.openweathermap.org/data/2.5/forecast"
     }
 
+<<<<<<< HEAD
     try:
         current_response = requests.get(
             endpoints['current'],
+=======
+    # OpenWeatherMap API configuration
+    api_key = ''
+    try:
+        # Make API request with proper parameters
+        response = requests.get(
+            "https://api.openweathermap.org/data/2.5/weather",
+>>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
             params={
                 "q": location_query,
                 "units": "imperial",
@@ -86,6 +121,7 @@ def fetch_weather(city, state, country):
         current_response.raise_for_status()
         current_data = current_response.json()
 
+<<<<<<< HEAD
         if not validate_owm_response(current_data, ['main', 'weather', 'wind']):
             logger.error(f"Invalid current weather structure: {current_data.keys()}")
             return {'error': 'Invalid weather data format'}
@@ -122,7 +158,13 @@ def fetch_weather(city, state, country):
             except (KeyError, IndexError, ValueError) as e:
                 logger.warning(f"Forecast processing error: {str(e)}")
                 continue
+=======
+        # Validate that response contains required data sections
+        if any(key in data for key in ('main', 'weather', 'wind')):
+            return {'error': 'Invalid API response format'}
+>>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
 
+        # Format and structure the weather data for template rendering
         return {
             'current': {
                 'temperature': f"{current_data['main']['temp']}°F",
@@ -139,6 +181,10 @@ def fetch_weather(city, state, country):
         }
 
     except requests.exceptions.HTTPError as e:
+<<<<<<< HEAD
+=======
+        # Handle specific HTTP error codes with user-friendly messages
+>>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
         error_map = {
             401: "Invalid API key - contact administrator",
             404: "Location not found - check input",
@@ -146,6 +192,7 @@ def fetch_weather(city, state, country):
         }
         logger.error(f"API HTTP error: {e.response.status_code}")
         return {'error': error_map.get(e.response.status_code, f"API Error: {e}")}
+<<<<<<< HEAD
     except (KeyError, IndexError) as e:
         logger.error(f"Data parsing error: {str(e)}")
         return {'error': "Unexpected data format from service"}
@@ -248,9 +295,26 @@ def weather_view(request):
 
             return render(request, 'weatherapp/weather_result.html', context)
 
+=======
+    except (KeyError, IndexError):
+        # Handle malformed API response data
+        return {'error': "Received unexpected data format from weather service"}
+    except requests.exceptions.RequestException as e:
+        # Handle general request errors (timeout, connection issues, etc.)
+        return {'error': f"Connection error: {str(e)}"}
+
+
+@require_http_methods(["GET", "POST"])
+def weather_view(request):
+    """
+    View function to handle weather form submission and display.
+    Supports both GET (display form) and POST (process form) requests.
+    """
+>>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
     if request.method == 'POST':
         form = WeatherForm(request.POST)
         if form.is_valid():
+<<<<<<< HEAD
             # Get form data
             city = form.cleaned_data['city']
             state = form.cleaned_data['state']
@@ -292,6 +356,21 @@ def weather_view(request):
                 ).exists()
 
                 context = {
+=======
+            print("Form is valid")
+            # Fetch weather data using form inputs
+            weather_data = fetch_weather(
+                city=form.cleaned_data['city'],
+                state=form.cleaned_data['state'],
+                country=form.cleaned_data['country']
+            )
+            # Handle any errors from the weather fetch
+            if 'error' in weather_data:
+                form.add_error(None, weather_data['error'])
+            else:
+                # Render results page with weather data
+                return render(request, 'weather_result.html', {
+>>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
                     'weather_info': weather_data,
                     'form_data': form.cleaned_data,
                     'map_context': {
@@ -305,9 +384,11 @@ def weather_view(request):
 
                 return render(request, 'weatherapp/weather_result.html', context)
     else:
+        # For GET requests, display empty form
         form = WeatherForm()
         context['form'] = form
 
+<<<<<<< HEAD
     # Add recent searches to context
     context['recent_searches'] = request.user.searches.all().order_by('-search_date')[:5]
     context['favorites'] = request.user.favorites.all().order_by('-created_at')
@@ -380,3 +461,7 @@ def remove_favorite_location(request):
 def favorite_list(request):
     favorites = request.user.favorites.all()
     return render(request, 'weatherapp/favorite_list.html', {'favorites': favorites})
+=======
+    # Render form page (either fresh or with errors)
+    return render(request, 'weather_form.html', {'form': form})
+>>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
