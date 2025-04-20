@@ -1,17 +1,7 @@
-<<<<<<< HEAD
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseBadRequest, JsonResponse
-from .models import SearchHistory, FavoriteLocation
-=======
 # Import necessary Django and third-party modules
-from django.shortcuts import render
+from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
-import requests
->>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
-from .forms import WeatherForm
-from django.conf import settings
 import requests
 import logging
 from geopy.geocoders import Nominatim
@@ -20,7 +10,10 @@ from django.core.cache import cache
 from datetime import datetime
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout, authenticate
-from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseBadRequest, JsonResponse
+from .models import SearchHistory, FavoriteLocation
+from .forms import WeatherForm
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -79,18 +72,11 @@ def fetch_weather(city, state, country):
         dict: Weather data or error message
     """
     country = country.upper()
-<<<<<<< HEAD
-    if len(country) != 2 or not country.isalpha():
-        return {'error': 'Invalid country code. Use 2-letter ISO format (e.g., US, UK)'}
-
-=======
 
     # Validate country code format
     if len(country) != 2 or not country.isalpha():
         return {'error': 'Invalid country code. Use 2-letter ISO format (e.g., US, UK)'}
 
-    # Construct location query based on whether it's a US location or not
->>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
     location_query = f"{city},{state},{country}" if country == "US" else f"{city},{country}"
     api_key = settings.OPENWEATHER_API_KEY
 
@@ -99,18 +85,9 @@ def fetch_weather(city, state, country):
         'forecast': "https://api.openweathermap.org/data/2.5/forecast"
     }
 
-<<<<<<< HEAD
     try:
         current_response = requests.get(
             endpoints['current'],
-=======
-    # OpenWeatherMap API configuration
-    api_key = ''
-    try:
-        # Make API request with proper parameters
-        response = requests.get(
-            "https://api.openweathermap.org/data/2.5/weather",
->>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
             params={
                 "q": location_query,
                 "units": "imperial",
@@ -121,7 +98,6 @@ def fetch_weather(city, state, country):
         current_response.raise_for_status()
         current_data = current_response.json()
 
-<<<<<<< HEAD
         if not validate_owm_response(current_data, ['main', 'weather', 'wind']):
             logger.error(f"Invalid current weather structure: {current_data.keys()}")
             return {'error': 'Invalid weather data format'}
@@ -158,11 +134,6 @@ def fetch_weather(city, state, country):
             except (KeyError, IndexError, ValueError) as e:
                 logger.warning(f"Forecast processing error: {str(e)}")
                 continue
-=======
-        # Validate that response contains required data sections
-        if any(key in data for key in ('main', 'weather', 'wind')):
-            return {'error': 'Invalid API response format'}
->>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
 
         # Format and structure the weather data for template rendering
         return {
@@ -181,10 +152,7 @@ def fetch_weather(city, state, country):
         }
 
     except requests.exceptions.HTTPError as e:
-<<<<<<< HEAD
-=======
         # Handle specific HTTP error codes with user-friendly messages
->>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
         error_map = {
             401: "Invalid API key - contact administrator",
             404: "Location not found - check input",
@@ -192,12 +160,11 @@ def fetch_weather(city, state, country):
         }
         logger.error(f"API HTTP error: {e.response.status_code}")
         return {'error': error_map.get(e.response.status_code, f"API Error: {e}")}
-<<<<<<< HEAD
-    except (KeyError, IndexError) as e:
-        logger.error(f"Data parsing error: {str(e)}")
-        return {'error': "Unexpected data format from service"}
+    except (KeyError, IndexError):
+        # Handle malformed API response data
+        return {'error': "Received unexpected data format from weather service"}
     except requests.exceptions.RequestException as e:
-        logger.error(f"Network error: {str(e)}")
+        # Handle general request errors (timeout, connection issues, etc.)
         return {'error': f"Connection error: {str(e)}"}
 
 
@@ -238,89 +205,14 @@ def weather_view(request):
     context = {
         'recent_searches': request.user.searches.all().order_by('-search_date')[:5],
         'favorites': request.user.favorites.all().order_by('-created_at')
-    }  # Initialize context
-    if request.method == 'GET' and 'city' in request.GET:
-        # Extract query parameters from GET request
-        city = request.GET.get('city')
-        state = request.GET.get('state', '')  # Optional
-        country = request.GET.get('country', '')
-
-        # Validate required fields
-        if not city or not country:
-            return HttpResponseBadRequest("Invalid search parameters.")
-
-        # Pre-fill form with existing data
-        initial_data = {'city': city, 'state': state, 'country': country}
-        form = WeatherForm(initial=initial_data)
-
-        # Fetch weather data
-        weather_data = fetch_weather(city, state, country)
-        if 'error' in weather_data:
-            form.add_error(None, weather_data['error'])
-            context['form'] = form
-            context['recent_searches'] = request.user.searches.all().order_by('-search_date')[:5]
-            context['weather_info'] = weather_data
-            context['favorites'] = request.user.favorites.all().order_by('-created_at')
-            return render(request, 'weatherapp/weather_form.html', context)
-        else:
-            form = WeatherForm(initial=initial_data)
-            # Save to search history
-            lat, lon = get_coordinates(city, state, country)
-            # SearchHistory.objects.create( #Remove this because you don't want to keep creating it
-            #     user=request.user,
-            #     city=city,
-            #     state=state,
-            #     country=country,
-            #     coordinates=f"{lat},{lon}",
-            #     query=f"{city}, {state}, {country}"
-            # )
-            is_favorite = FavoriteLocation.objects.filter(
-                user=request.user,
-                city=city,
-                state=state,
-                country=country
-            ).exists()
-
-            context = {
-                'weather_info': weather_data,
-                'form_data': initial_data,
-                'is_favorite': is_favorite,
-                'favorites': request.user.favorites.all().order_by('-created_at'),
-                'map_context': {
-                    'api_key': settings.OPENWEATHER_API_KEY,
-                    'lat': lat,
-                    'lon': lon
-                }
-            }
-
-            return render(request, 'weatherapp/weather_result.html', context)
-
-=======
-    except (KeyError, IndexError):
-        # Handle malformed API response data
-        return {'error': "Received unexpected data format from weather service"}
-    except requests.exceptions.RequestException as e:
-        # Handle general request errors (timeout, connection issues, etc.)
-        return {'error': f"Connection error: {str(e)}"}
-
-
-@require_http_methods(["GET", "POST"])
-def weather_view(request):
-    """
-    View function to handle weather form submission and display.
-    Supports both GET (display form) and POST (process form) requests.
-    """
->>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
+    }
     if request.method == 'POST':
         form = WeatherForm(request.POST)
         if form.is_valid():
-<<<<<<< HEAD
-            # Get form data
             city = form.cleaned_data['city']
             state = form.cleaned_data['state']
             country = form.cleaned_data['country']
 
-            # Fetch weather data
             weather_data = fetch_weather(city, state, country)
 
             if 'error' in weather_data:
@@ -330,20 +222,17 @@ def weather_view(request):
                 context['favorites'] = request.user.favorites.all().order_by('-created_at')
                 return render(request, 'weatherapp/weather_form.html', context)
             else:
-                # Get coordinates
                 lat, lon = get_coordinates(city, state, country)
 
-                # Create search history entry
                 SearchHistory.objects.create(
                     user=request.user,
                     city=form.cleaned_data['city'],
                     state=form.cleaned_data['state'],
                     country=form.cleaned_data['country'],
                     coordinates=f"{lat},{lon}",
-                    query=f"{city}, {state}, {country}"  # Optional, auto-populated
+                    query=f"{city}, {state}, {country}"
                 )
 
-                # Fallback coordinates
                 if None in (lat, lon):
                     lat, lon = 38.8339, -104.8214
                     logger.info(f"Using fallback coordinates for {city}")
@@ -356,21 +245,6 @@ def weather_view(request):
                 ).exists()
 
                 context = {
-=======
-            print("Form is valid")
-            # Fetch weather data using form inputs
-            weather_data = fetch_weather(
-                city=form.cleaned_data['city'],
-                state=form.cleaned_data['state'],
-                country=form.cleaned_data['country']
-            )
-            # Handle any errors from the weather fetch
-            if 'error' in weather_data:
-                form.add_error(None, weather_data['error'])
-            else:
-                # Render results page with weather data
-                return render(request, 'weather_result.html', {
->>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
                     'weather_info': weather_data,
                     'form_data': form.cleaned_data,
                     'map_context': {
@@ -381,15 +255,11 @@ def weather_view(request):
                     'is_favorite': is_favorite,
                     'favorites': request.user.favorites.all().order_by('-created_at')
                 }
-
                 return render(request, 'weatherapp/weather_result.html', context)
     else:
-        # For GET requests, display empty form
         form = WeatherForm()
         context['form'] = form
 
-<<<<<<< HEAD
-    # Add recent searches to context
     context['recent_searches'] = request.user.searches.all().order_by('-search_date')[:5]
     context['favorites'] = request.user.favorites.all().order_by('-created_at')
     return render(request, 'weatherapp/weather_form.html', context)
@@ -401,39 +271,17 @@ def add_favorite_location(request):
     city = request.POST.get('city')
     state = request.POST.get('state')
     country = request.POST.get('country')
-    nickname = request.POST.get('nickname', '')  # Optional nickname
 
-    if not all([city, country]):
-        return JsonResponse({'status': 'error', 'message': 'City and country are required.'}, status=400)
-
-    # Check if a favorite location with the same details already exists for the user
-    existing_favorite = FavoriteLocation.objects.filter(
-        user=request.user,
-        city=city,
-        state=state,
-        country=country
-    ).first()
-
-    if existing_favorite:
-        return JsonResponse({'status': 'error', 'message': 'Location is already a favorite.'}, status=400)
-
-    lat, lon = get_coordinates(city, state, country)
-    if not lat or not lon:
-        return JsonResponse({'status': 'error', 'message': 'Could not retrieve coordinates.'}, status=400)
-
-    try:
-        FavoriteLocation.objects.create(
+    if city and country:
+        FavoriteLocation.objects.get_or_create(
             user=request.user,
             city=city,
             state=state,
-            country=country,
-            coordinates=f"{lat},{lon}",
-            nickname=nickname
+            country=country
         )
-        return JsonResponse({'status': 'success', 'message': f'{city} added to favorites.', 'action': 'remove'})
-    except Exception as e:
-        logger.error(f"Error adding favorite: {e}")
-        return JsonResponse({'status': 'error', 'message': 'Could not add to favorites.'}, status=500)
+        return JsonResponse({'status': 'success', 'message': 'Location added to favorites.'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Invalid location data.'}, status=400)
 
 
 @login_required
@@ -443,25 +291,17 @@ def remove_favorite_location(request):
     state = request.POST.get('state')
     country = request.POST.get('country')
 
-    if not all([city, country]):
-        return JsonResponse({'status': 'error', 'message': 'City and country are required.'}, status=400)
-
-    try:
-        location = FavoriteLocation.objects.get(user=request.user, city=city, state=state, country=country)
-        location.delete()
-        return JsonResponse({'status': 'success', 'message': f'{city} removed from favorites.', 'action': 'add'})
-    except FavoriteLocation.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Location not found in favorites.'}, status=404)
-    except Exception as e:
-        logger.error(f"Error removing favorite: {e}")
-        return JsonResponse({'status': 'error', 'message': 'Could not remove from favorites.'}, status=500)
-
-
-@login_required
-def favorite_list(request):
-    favorites = request.user.favorites.all()
-    return render(request, 'weatherapp/favorite_list.html', {'favorites': favorites})
-=======
-    # Render form page (either fresh or with errors)
-    return render(request, 'weather_form.html', {'form': form})
->>>>>>> cea6acda02bde970895e2d52b45b11b4ec9f796c
+    if city and country:
+        try:
+            favorite = FavoriteLocation.objects.get(
+                user=request.user,
+                city=city,
+                state=state,
+                country=country
+            )
+            favorite.delete()
+            return JsonResponse({'status': 'success', 'message': 'Location removed from favorites.'})
+        except FavoriteLocation.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Location not in favorites.'}, status=404)
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Invalid location data.'}, status=400)
