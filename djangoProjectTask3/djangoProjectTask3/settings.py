@@ -10,13 +10,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-$a%f+d&%&t=u68+02f(71ovu)@-l2@5z6p)ipek*g$x^m+m&w%'
 
-# SECURITY WARNING: don't run with debug turned on in production!
+# Will change debug to false when officially released
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
-
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -75,10 +72,7 @@ DATABASES = {
     }
 }
 
-
-# Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -94,10 +88,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
@@ -107,23 +98,21 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
 
+# https://docs.djangoproject.com/en/5.1/howto/static-files/
 STATIC_URL = 'static/'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
+# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Load environment variables from .env file
+load_dotenv()
 
-load_dotenv()  # Load environment variables from .env file
-
-# OpenWeatherMap Configuration
+# OpenWeatherMap config
 OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', 'bd9b9899eab4c8ba0555b0e85c0321f2')  # Default to your key
 
-# Cache Configuration
+# Cache config
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -140,21 +129,14 @@ LOGIN_REDIRECT_URL = "weather_view"
 SESSION_COOKIE_AGE = 1209600 # 2 weeks
 SESSION_SAVE_EVERY_REQUEST = True
 
-# Security Enhancements
+# Security
 if DEBUG:
     ALLOWED_HOSTS = ['*']
 else:
-    ALLOWED_HOSTS = ['yourdomain.com']  # Set your production domain
+    ALLOWED_HOSTS = ['raindrop.cfd']
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-# Static files configuration
-#STATIC_ROOT = BASE_DIR / 'staticfiles'
-#STATICFILES_DIRS = [
-#    BASE_DIR / 'static',
-#]
-
-# Add if using Django 4.2+ for better security headers
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'

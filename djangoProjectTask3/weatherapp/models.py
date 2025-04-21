@@ -1,4 +1,4 @@
-# models.py
+
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.contrib.auth import get_user_model
@@ -6,6 +6,7 @@ from django.urls import reverse
 
 User = get_user_model()
 
+#Class to store Search history
 class SearchHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='searches')
     query = models.CharField(max_length=255)
@@ -19,8 +20,8 @@ class SearchHistory(models.Model):
         ordering = ['-search_date']
         verbose_name_plural = 'Search Histories'
 
+# This function extract the city, state, and country from the incoming search history object
     def get_components(self):
-        """Safer component parsing with error handling"""
         try:
             if self.city and self.state and self.country:
                 return self.city, self.state, self.country
@@ -34,19 +35,18 @@ class SearchHistory(models.Model):
         except (AttributeError, IndexError):
             return '', '', ''
 
+    # This function takes a search history object and create a url for searching purposes
     def get_search_url(self):
-        """URL-encoded search parameters"""
         city, state, country = self.get_components()
         return reverse('weather_view') + f"?city={city}&state={state}&country={country}"
 
     def save(self, *args, **kwargs):
-        """Auto-populate query if components exist"""
         if not self.query and all([self.city, self.state, self.country]):
             self.query = f"{self.city}, {self.state}, {self.country}"
         super().save(*args, **kwargs)
 
+    # Handles when a user saves a location to favorites from search history
     def save_as_favorite(self, user, nickname=None):
-        """Convert search entry to favorite"""
         return FavoriteLocation.objects.create(
             user=user,
             nickname=nickname,
@@ -56,6 +56,7 @@ class SearchHistory(models.Model):
             coordinates=self.coordinates
         )
 
+# Creating a class to store favorite location objects
 class FavoriteLocation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
     nickname = models.CharField(max_length=100, blank=True, null=True)
@@ -69,8 +70,8 @@ class FavoriteLocation(models.Model):
         ordering = ['-created_at']
         unique_together = [['user', 'city', 'state', 'country']]
 
+    # Takes a favorite object and returns a url for searching purposes
     def get_weather_url(self):
-        """Generate direct weather URL using stored components"""
         return reverse('weather_view') + f"?city={self.city}&state={self.state}&country={self.country}"
 
     def __str__(self):

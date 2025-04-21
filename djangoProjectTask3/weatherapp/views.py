@@ -1,4 +1,4 @@
-# Import necessary Django and third-party modules
+#Import necessary Django and third-party modules
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
@@ -22,16 +22,18 @@ logger = logging.getLogger(__name__)
 GEOCODE_CACHE_TIMEOUT = 60 * 60 * 24
 SAFE_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
 
-
+# Ensures the returned string only contains safe characters
 def sanitize_cache_key(key):
     return "".join(c if c in SAFE_CHARS else "_" for c in key)
 
-
+# This function takes the city, state, and country and gathers the geo coords of that area
+# This function is for the weather map
 def get_coordinates(city, state, country):
     raw_key = f"geo_{city}_{state}_{country}"
     cache_key = sanitize_cache_key(raw_key)
 
     cached = cache.get(cache_key)
+    #Handles if the request is already stored in the cache
     if cached:
         return cached
 
@@ -56,21 +58,13 @@ def get_coordinates(city, state, country):
         logger.error(f"Geocoding error: {str(e)}")
         return (None, None)
 
-
+# Ensures all required fields are in the data set
 def validate_owm_response(data, required_fields):
     return all(field in data for field in required_fields)
 
-
+# This function gathers weather data for the provided city, state, and country
 def fetch_weather(city, state, country):
-    """
-    Fetches weather data from OpenWeatherMap API for a given location.
-    Parameters:
-        city (str): Name of the city
-        state (str): State code (required for US locations)
-        country (str): Two-letter country code
-    Returns:
-        dict: Weather data or error message
-    """
+
     country = country.upper()
 
     # Validate country code format
@@ -152,7 +146,7 @@ def fetch_weather(city, state, country):
         }
 
     except requests.exceptions.HTTPError as e:
-        # Handle specific HTTP error codes with user-friendly messages
+        # Handles HTTP errors with a provided message
         error_map = {
             401: "Invalid API key - contact administrator",
             404: "Location not found - check input",
@@ -161,13 +155,13 @@ def fetch_weather(city, state, country):
         logger.error(f"API HTTP error: {e.response.status_code}")
         return {'error': error_map.get(e.response.status_code, f"API Error: {e}")}
     except (KeyError, IndexError):
-        # Handle malformed API response data
+        # Handles API error response data
         return {'error': "Received unexpected data format from weather service"}
     except requests.exceptions.RequestException as e:
-        # Handle general request errors (timeout, connection issues, etc.)
+        # Handles general errors (timeout, connection issues, etc.)
         return {'error': f"Connection error: {str(e)}"}
 
-
+# This function handles user login
 def user_login(request):
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
@@ -182,7 +176,7 @@ def user_login(request):
         form = AuthenticationForm()
     return render(request, 'registration/login.html', {'form': form})
 
-
+# This function handles user registration
 def register(request):
     if request.method == "POST":
         form = UserCreationForm(request.POST)
@@ -194,25 +188,28 @@ def register(request):
         form = UserCreationForm()
     return render(request, "registration/register.html", {"form": form})
 
-
+#Function to handle user logout
 def user_logout(request):
     logout(request)
     return redirect('login')
 
-
+# This function handles displaying the weather data to user including the weather map
 @login_required
 def weather_view(request):
     context = {
         'recent_searches': request.user.searches.all().order_by('-search_date')[:5],
         'favorites': request.user.favorites.all().order_by('-created_at')
-    }
+    }  # Initialize context
+
     if request.method == 'POST':
         form = WeatherForm(request.POST)
         if form.is_valid():
+            # Get form data
             city = form.cleaned_data['city']
             state = form.cleaned_data['state']
             country = form.cleaned_data['country']
 
+            # Fetch weather data
             weather_data = fetch_weather(city, state, country)
 
             if 'error' in weather_data:
@@ -222,8 +219,10 @@ def weather_view(request):
                 context['favorites'] = request.user.favorites.all().order_by('-created_at')
                 return render(request, 'weatherapp/weather_form.html', context)
             else:
+                # Call to get_coordinates function
                 lat, lon = get_coordinates(city, state, country)
 
+                # Create search history entry
                 SearchHistory.objects.create(
                     user=request.user,
                     city=form.cleaned_data['city'],
@@ -233,6 +232,7 @@ def weather_view(request):
                     query=f"{city}, {state}, {country}"
                 )
 
+                # Fallback coordinates
                 if None in (lat, lon):
                     lat, lon = 38.8339, -104.8214
                     logger.info(f"Using fallback coordinates for {city}")
@@ -255,16 +255,26 @@ def weather_view(request):
                     'is_favorite': is_favorite,
                     'favorites': request.user.favorites.all().order_by('-created_at')
                 }
+
                 return render(request, 'weatherapp/weather_result.html', context)
     else:
+        # For GET requests, display empty form
         form = WeatherForm()
         context['form'] = form
 
+    # Add recent searches to context
     context['recent_searches'] = request.user.searches.all().order_by('-search_date')[:5]
     context['favorites'] = request.user.favorites.all().order_by('-created_at')
     return render(request, 'weatherapp/weather_form.html', context)
 
+#Function to gather user favorites and display
+@login_required
+def favorite_list(request):
+    favorites = request.user.favorites.all().order_by('-created_at')
+    return render(request, 'weatherapp/favorites.html', {'favorites': favorites})
 
+
+#Function to handle a user adding a location as favorite
 @login_required
 @require_http_methods(["POST"])
 def add_favorite_location(request):
@@ -284,6 +294,7 @@ def add_favorite_location(request):
         return JsonResponse({'status': 'error', 'message': 'Invalid location data.'}, status=400)
 
 
+#Function to handle a user removing a favorite location
 @login_required
 @require_http_methods(["POST"])
 def remove_favorite_location(request):
