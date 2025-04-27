@@ -2,12 +2,8 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-$a%f+d&%&t=u68+02f(71ovu)@-l2@5z6p)ipek*g$x^m+m&w%'
 
 # Will change debug to false when officially released
@@ -110,7 +106,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 load_dotenv()
 
 # OpenWeatherMap config
-OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', 'bd9b9899eab4c8ba0555b0e85c0321f2')  # Default to your key
+OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '')
 
 # Cache config
 CACHES = {

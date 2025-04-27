@@ -1,7 +1,7 @@
 from django.utils.deprecation import MiddlewareMixin
 from .models import SearchHistory
-import uuid
 
+#Process the search history for users and links to user
 class SearchHistoryMiddleware(MiddlewareMixin):
     def process_request(self, request):
         if request.method == 'GET' and 'q' in request.GET:

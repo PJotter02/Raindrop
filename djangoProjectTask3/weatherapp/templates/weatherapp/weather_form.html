@@ -26,11 +26,20 @@ $(document).ready(function() {
         e.preventDefault();
         const button = $(this);
         const url = button.data('action');
-        
+
+        // Validate state and country length
+        const state = button.data('state');
+        const country = button.data('country');
+
+        if (state.length !== 2 || country.length !== 2) {
+            alert('State and Country must be exactly 2 characters.');
+            return;
+        }
+
         const locationData = {
             city: button.data('city'),
-            state: button.data('state'),
-            country: button.data('country'),
+            state: state,
+            country: country,
             csrfmiddlewaretoken: '{{ csrf_token }}'
         };
 
@@ -62,6 +71,19 @@ $(document).ready(function() {
             grid.appendChild(module);
         });
     }
+
+    // Submit form when favorite or recent search is clicked
+    $('.favorite-link, .search-link').click(function(e) {
+        e.preventDefault();
+        const city = $(this).data('city');
+        const state = $(this).data('state');
+        const country = $(this).data('country');
+
+        $('#city').val(city);
+        $('#state').val(state);
+        $('#country').val(country);
+        $('#weather-form').submit();
+    });
 });
 </script>
 {% endblock %}
@@ -71,7 +93,7 @@ $(document).ready(function() {
   <div class="header" style="background-color: #123458; color: white;">
     <div class="user-status">
       {% if user.is_authenticated %}
-      
+
       {% else %}
       <a href="{% url 'login' %}?next={{ request.path }}" class="btn-login">Log In</a>
       {% endif %}
@@ -87,14 +109,24 @@ $(document).ready(function() {
         <span class="grip" style="color: #030303;">⣿⣿</span>
       </div>
       <div class="module-content">
-        <form method="post">
+        <form id="weather-form" method="post">
           {% csrf_token %}
-          {{ form.as_p }}
+          <p>
+            {{ form.city.label_tag }} <input type="text" name="city" id="city" value="{{ form.city.value|default:'' }}">
+          </p>
+          <p>
+            {{ form.state.label_tag }} <input type="text" name="state" id="state" value="{{ form.state.value|default:'' }}">
+            <small>(2 characters)</small>
+          </p>
+          <p>
+            {{ form.country.label_tag }} <input type="text" name="country" id="country" value="{{ form.country.value|default:'' }}">
+            <small>(2 characters)</small>
+          </p>
           <button type="submit" class="btn-submit" style="background-color: #123458; color: white;">Get Weather</button>
         </form>
         {% if weather_info %}
         <div class="favorite-section">
-          <button class="favorite-toggle" 
+          <button class="favorite-toggle"
                   data-action="{% url 'add_favorite_location' %}"
                   data-city="{{ form_data.city }}"
                   data-state="{{ form_data.state }}"
@@ -120,7 +152,11 @@ $(document).ready(function() {
         <ul class="favorites-list">
           {% for favorite in favorites %}
           <li class="favorite-item">
-            <a href="{{ favorite.get_weather_url }}" class="favorite-link" style="color: #030303;">
+            <a href="#" class="favorite-link"
+               data-city="{{ favorite.city }}"
+               data-state="{{ favorite.state }}"
+               data-country="{{ favorite.country }}"
+               style="color: #030303;">
               {{ favorite.nickname|default:favorite.city }}
             </a>
             <button class="favorite-toggle btn-remove"
@@ -150,7 +186,11 @@ $(document).ready(function() {
         <ul class="search-history-list">
           {% for search in recent_searches %}
           <li class="search-item">
-            <a href="{{ search.get_search_url }}" class="search-link" style="color: #030303;">
+            <a href="#" class="search-link"
+               data-city="{{ search.city }}"
+               data-state="{{ search.state }}"
+               data-country="{{ search.country }}"
+               style="color: #030303;">
               <span class="search-query">{{ search.query }}</span>
               <span class="search-date">{{ search.search_date|date:"M d, Y H:i" }}</span>
             </a>
@@ -287,11 +327,13 @@ $(document).ready(function() {
     .dashboard-grid {
       grid-template-columns: 1fr;
     }
-    
+
     .favorite-item, .search-item {
+      flex-direction: column;
+      align-items: flex-start;
       flex-wrap: wrap;
     }
-    
+
     .favorite-toggle {
       margin-top: 5px;
       width: 100%;

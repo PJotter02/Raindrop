@@ -1,4 +1,4 @@
-
+# This file allows us to create data structures
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.contrib.auth import get_user_model

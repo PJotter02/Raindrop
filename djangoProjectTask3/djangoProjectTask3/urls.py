@@ -1,3 +1,4 @@
+# Handles site routing between weather app and accounts
 from django.contrib import admin
 from django.urls import path, include
 

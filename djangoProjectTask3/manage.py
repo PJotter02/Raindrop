@@ -2,10 +2,13 @@
 import os
 import sys
 
-
+#This allows the devs to run the django project through the command line
+# I.E. python manage.py runserver
 def main():
+    #Sets up enviromental vars
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'djangoProjectTask3.settings')
     try:
+        #allows for django command line utilization
         from django.core.management import execute_from_command_line
     except ImportError as exc:
         raise ImportError(
