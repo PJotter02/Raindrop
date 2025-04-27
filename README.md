@@ -1,13 +1,7 @@
-##How to Run a Django Project
-1) Run the weather_venv using .\weather_venv\scripts\activate
-2) Run the Django project using python manage.py runserver
-      - It has to be run within the project directory
+# How to use Raindrop
+Raindrop is a web-based application designed to provide you with weather information. Due to this to run the code locally in complex. For ease of grading we have set it up on a server via Hostinger.
 
-##How to Stop a Django Project
-1) Use CRTL-BREAK 
-      - For my laptop, I need to use ctrl+fn+b
+To use and interact with our project, open your web browser and visit the following URL:
 
-##How to Migrate changes in Django Project
-1) Use the above command to stop execution
-2) type python manage.py migrate
+http://62.72.1.229:8000/
 
